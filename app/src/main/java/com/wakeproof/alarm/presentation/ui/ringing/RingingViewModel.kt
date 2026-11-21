@@ -3,7 +3,18 @@ package com.wakeproof.alarm.presentation.ui.ringing
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.wakeproof.alarm.domain.emergency.EmergencyPhraseMatcher
+import com.wakeproof.alarm.domain.model.Alarm
+import com.wakeproof.alarm.domain.model.TaskSessionResult
 import com.wakeproof.alarm.domain.repository.AlarmRepository
+import com.wakeproof.alarm.domain.repository.EmergencyPhraseRepository
+import com.wakeproof.alarm.domain.repository.TaskSessionRepository
+import com.wakeproof.alarm.domain.session.AnswerOutcome
+import com.wakeproof.alarm.domain.session.RoundState
+import com.wakeproof.alarm.domain.session.TaskSessionEngine
+import com.wakeproof.alarm.domain.session.TaskSessionRecorder
+import com.wakeproof.alarm.domain.task.TaskColor
+import java.util.Locale
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,30 +24,81 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/**
- * UI state of the ringing screen (stage 2): the ringing alarm's own
- * ring time as its identity ("Будильник · 07:30") and the live clock.
- */
+/** Screen-level phases of the ringing flow. */
+enum class RingingPhase {
+    /** Alarm is being loaded from Room. */
+    LOADING,
+
+    /** Solving the task queue, spec 4.1.3. */
+    TASKS,
+
+    /** All tasks solved - morning summary, spec 4.1.3. */
+    SUMMARY,
+
+    /** Emergency exit phrase input, spec 4.1.4. */
+    EMERGENCY_PHRASE,
+
+    /** Emergency exit completed; only the close button remains. */
+    EMERGENCY_DONE
+}
+
+/** UI phases of the memory round: flash animation vs user input. */
+enum class MemoryPhase { SHOWING, INPUT }
+
+/** Task-part of the UI state; mirrors the engine snapshot. */
+data class TaskUiState(
+    /** 1-based task number for «Задача N из M». */
+    val taskNumber: Int,
+    val totalTasks: Int,
+    val totalMistakes: Int,
+    val round: RoundState,
+    val memoryPhase: MemoryPhase,
+    /** Increments on every flash start; drives the replay animation. */
+    val memoryShowId: Int
+)
+
+/** Morning summary values, spec 4.1.3. */
+data class SummaryUiState(
+    /** Sum of the solved tasks' durations. */
+    val solveTimeMs: Long,
+    val mistakes: Int
+)
+
 data class RingingUiState(
     val isLoaded: Boolean = false,
     /** "HH:mm" of the ringing alarm's configured time; null while loading. */
-    val alarmTimeLabel: String? = null
+    val alarmTimeLabel: String? = null,
+    val phase: RingingPhase = RingingPhase.LOADING,
+    val task: TaskUiState? = null,
+    val summary: SummaryUiState? = null,
+    /** The phrase shown as a small gray hint on the emergency screen. */
+    val emergencyHintPhrase: String? = null,
+    val isEmergencyPhraseWrong: Boolean = false
 )
 
 /** One-shot events the activity reacts to. */
 sealed interface RingingEvent {
     /** The alarm vanished from Room (deleted mid-ring): stop ringing. */
     data object AlarmGone : RingingEvent
+
+    /**
+     * The alarm is solved/emergency-exited: stop the sound and the
+     * service and re-arm the schedule, but KEEP the UI on screen
+     * (summary / emergency-done screens).
+     */
+    data object StopRinging : RingingEvent
 }
 
 /**
- * ViewModel behind [RingingActivity]. Loads the alarm by id from the
- * intent; the temporary "Выключить" action (stage 4 will replace it
- * with tasks) is handled by the activity through the service intent.
+ * ViewModel behind [RingingActivity]. Builds the task queue from the
+ * alarm's settings via the stage-3 engine, records the session into
+ * Room and drives the emergency exit flow (spec 4.1.3 / 4.1.4).
  */
 class RingingViewModel(
     private val alarmId: Long,
-    private val alarmRepository: AlarmRepository
+    private val alarmRepository: AlarmRepository,
+    private val taskSessionRepository: TaskSessionRepository,
+    private val emergencyPhraseRepository: EmergencyPhraseRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RingingUiState())
@@ -45,37 +107,257 @@ class RingingViewModel(
     private val events = Channel<RingingEvent>(Channel.BUFFERED)
     val eventsFlow: Flow<RingingEvent> = events.receiveAsFlow()
 
+    private var engine: TaskSessionEngine? = null
+    private var recorder: TaskSessionRecorder? = null
+
     init {
         viewModelScope.launch {
             if (alarmId <= 0L) {
-                // Defensive: the FSI always carries the id; a manual launch
-                // without one just shows the plain ringing screen.
-                _uiState.update { it.copy(isLoaded = true) }
+                // Defensive: the FSI always carries the id; a manual
+                // launch without one has nothing to solve.
+                events.send(RingingEvent.AlarmGone)
                 return@launch
             }
             val alarm = alarmRepository.getAlarmById(alarmId)
             if (alarm == null) {
                 events.send(RingingEvent.AlarmGone)
             } else {
-                _uiState.update {
-                    it.copy(
-                        isLoaded = true,
-                        alarmTimeLabel = formatTime(alarm.hour, alarm.minute)
-                    )
-                }
+                startSession(alarm)
             }
         }
     }
 
+    private fun startSession(alarm: Alarm) {
+        val newEngine = TaskSessionEngine(
+            selectedTypes = alarm.taskTypes,
+            taskCount = alarm.taskCount,
+            difficulty = alarm.difficulty
+        )
+        engine = newEngine
+        recorder = TaskSessionRecorder(alarmId, taskSessionRepository)
+        _uiState.update {
+            it.copy(
+                isLoaded = true,
+                alarmTimeLabel = formatTime(alarm.hour, alarm.minute),
+                phase = RingingPhase.TASKS
+            )
+        }
+        publishTasksState()
+    }
+
+    // --- Math round ------------------------------------------------------------
+
+    /** @return true when the submitted answer was correct (UI feedback). */
+    fun onMathSubmit(answer: Int): Boolean {
+        val eng = engine ?: return false
+        if (eng.state.isFinished || _uiState.value.phase != RingingPhase.TASKS) return false
+        return when (eng.onMathSubmit(answer)) {
+            AnswerOutcome.BLOCK_DONE -> {
+                maybeFinishSession()
+                true
+            }
+            AnswerOutcome.CORRECT -> {
+                publishTasksState()
+                true
+            }
+            AnswerOutcome.MISTAKE -> {
+                publishTasksState()
+                false
+            }
+        }
+    }
+
+    // --- Memory round ------------------------------------------------------------
+
+    /** The sequence to flash; the engine keeps it stable across replays. */
+    fun currentMemorySequence(): List<TaskColor> =
+        engine?.memorySequenceColors() ?: emptyList()
+
+    /** Called by the UI when the flash animation finished. */
+    fun onMemorySequenceShown() {
+        _uiState.update { state ->
+            state.copy(
+                task = state.task?.copy(memoryPhase = MemoryPhase.INPUT)
+            )
+        }
+    }
+
+    /** @return true when the tapped color matched the expected position. */
+    fun onMemoryTap(color: TaskColor): Boolean {
+        val eng = engine ?: return false
+        if (eng.state.isFinished || _uiState.value.phase != RingingPhase.TASKS) return false
+        return when (eng.onMemoryTap(color)) {
+            AnswerOutcome.MISTAKE -> {
+                // Same sequence replays from the start (no dead ends).
+                publishTasksState(forceShow = true)
+                false
+            }
+            AnswerOutcome.CORRECT -> {
+                publishTasksState()
+                true
+            }
+            AnswerOutcome.BLOCK_DONE -> {
+                maybeFinishSession()
+                true
+            }
+        }
+    }
+
+    // --- Stroop round ------------------------------------------------------------
+
+    /** @return true when the pressed button matched the INK color. */
+    fun onStroopSubmit(color: TaskColor): Boolean {
+        val eng = engine ?: return false
+        if (eng.state.isFinished || _uiState.value.phase != RingingPhase.TASKS) return false
+        return when (eng.onStroopSubmit(color)) {
+            AnswerOutcome.BLOCK_DONE -> {
+                maybeFinishSession()
+                true
+            }
+            AnswerOutcome.CORRECT -> {
+                publishTasksState()
+                true
+            }
+            AnswerOutcome.MISTAKE -> {
+                publishTasksState()
+                false
+            }
+        }
+    }
+
+    // --- Emergency exit (spec 4.1.4) --------------------------------------------
+
+    /** The hidden corner has been held for 5 seconds. */
+    fun onEmergencyCornerActivated() {
+        if (_uiState.value.phase != RingingPhase.TASKS) return
+        viewModelScope.launch {
+            val phrase = emergencyPhraseRepository.getOrCreatePhrase()
+            _uiState.update {
+                it.copy(
+                    phase = RingingPhase.EMERGENCY_PHRASE,
+                    emergencyHintPhrase = phrase,
+                    isEmergencyPhraseWrong = false
+                )
+            }
+        }
+    }
+
+    /** Clears the wrong-phrase error while the user keeps typing. */
+    fun onEmergencyPhraseChanged() {
+        if (_uiState.value.isEmergencyPhraseWrong) {
+            _uiState.update { it.copy(isEmergencyPhraseWrong = false) }
+        }
+    }
+
+    fun onEmergencySubmit(input: String) {
+        val phrase = _uiState.value.emergencyHintPhrase ?: return
+        if (_uiState.value.phase != RingingPhase.EMERGENCY_PHRASE) return
+        if (!EmergencyPhraseMatcher.matches(input, phrase)) {
+            _uiState.update { it.copy(isEmergencyPhraseWrong = true) }
+            return
+        }
+        val eng = engine
+        viewModelScope.launch {
+            recorder?.finish(
+                result = TaskSessionResult.EMERGENCY,
+                taskResults = eng?.results ?: emptyList(),
+                totalMistakes = eng?.state?.totalMistakes ?: 0
+            )
+            _uiState.update {
+                it.copy(phase = RingingPhase.EMERGENCY_DONE, isEmergencyPhraseWrong = false)
+            }
+            events.send(RingingEvent.StopRinging)
+        }
+    }
+
+    /** Back from the phrase screen to the tasks (no dead ends). */
+    fun onEmergencyBackToTasks() {
+        if (_uiState.value.phase != RingingPhase.EMERGENCY_PHRASE) return
+        _uiState.update { it.copy(phase = RingingPhase.TASKS, isEmergencyPhraseWrong = false) }
+    }
+
+    // --- Internals ------------------------------------------------------------
+
+    /**
+     * Refreshes the task state after every answer. [forceShow] restarts
+     * the memory flash (new memory block or replay after a mistake).
+     */
+    private fun publishTasksState(forceShow: Boolean = false) {
+        val eng = engine ?: return
+        val state = eng.state
+        val previous = _uiState.value.task
+        val round = state.round
+        val isNewMemoryBlock = round is RoundState.Memory &&
+            (previous == null ||
+                previous.round !is RoundState.Memory ||
+                previous.taskNumber != state.taskIndex + 1)
+        val showFromScratch = round is RoundState.Memory && (forceShow || isNewMemoryBlock)
+        val memoryPhase = when {
+            round !is RoundState.Memory -> MemoryPhase.INPUT
+            showFromScratch -> MemoryPhase.SHOWING
+            else -> previous?.memoryPhase ?: MemoryPhase.SHOWING
+        }
+        val memoryShowId = when {
+            round !is RoundState.Memory -> previous?.memoryShowId ?: 0
+            showFromScratch -> (previous?.memoryShowId ?: 0) + 1
+            else -> previous?.memoryShowId ?: 0
+        }
+        _uiState.update {
+            it.copy(
+                task = TaskUiState(
+                    taskNumber = state.taskIndex + 1,
+                    totalTasks = state.totalTasks,
+                    totalMistakes = state.totalMistakes,
+                    round = round,
+                    memoryPhase = memoryPhase,
+                    memoryShowId = memoryShowId
+                )
+            )
+        }
+    }
+
+    private fun maybeFinishSession() {
+        val eng = engine ?: return
+        if (!eng.state.isFinished) {
+            publishTasksState()
+            return
+        }
+        val summary = SummaryUiState(
+            solveTimeMs = eng.results.sumOf { it.timeTakenMs },
+            mistakes = eng.state.totalMistakes
+        )
+        viewModelScope.launch {
+            recorder?.finish(
+                result = TaskSessionResult.CLEAN,
+                taskResults = eng.results,
+                totalMistakes = eng.state.totalMistakes
+            )
+            _uiState.update {
+                it.copy(phase = RingingPhase.SUMMARY, summary = summary, task = null)
+            }
+            events.send(RingingEvent.StopRinging)
+        }
+    }
+
     private fun formatTime(hour: Int, minute: Int): String =
-        "%02d:%02d".format(java.util.Locale.ROOT, hour, minute)
+        "%02d:%02d".format(Locale.ROOT, hour, minute)
 
     companion object {
-        fun factory(alarmId: Long, repository: AlarmRepository): ViewModelProvider.Factory =
+        fun factory(
+            alarmId: Long,
+            alarmRepository: AlarmRepository,
+            taskSessionRepository: TaskSessionRepository,
+            emergencyPhraseRepository: EmergencyPhraseRepository
+        ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                    RingingViewModel(alarmId, repository) as T
+                    RingingViewModel(
+                        alarmId,
+                        alarmRepository,
+                        taskSessionRepository,
+                        emergencyPhraseRepository
+                    ) as T
             }
     }
 }

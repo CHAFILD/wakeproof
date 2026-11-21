@@ -10,6 +10,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.wakeproof.alarm.presentation.ui.alarms.AlarmsScreen
 import com.wakeproof.alarm.presentation.ui.editor.AlarmEditorScreen
+import com.wakeproof.alarm.presentation.ui.settings.SettingsScreen
 import com.wakeproof.alarm.presentation.ui.sleep.SleepScreen
 import com.wakeproof.alarm.presentation.ui.stats.StatsScreen
 
@@ -31,6 +32,7 @@ fun WakeProofApp(modifier: Modifier = Modifier) {
             AlarmsScreen(
                 onOpenStats = { navController.navigate(Destinations.STATS) },
                 onOpenSleep = { navController.navigate(Destinations.SLEEP) },
+                onOpenSettings = { navController.navigate(Destinations.SETTINGS) },
                 onOpenEditor = { alarmId ->
                     navController.navigate(Destinations.alarmEditor(alarmId))
                 }
@@ -52,6 +54,9 @@ fun WakeProofApp(modifier: Modifier = Modifier) {
         }
         composable(Destinations.SLEEP) {
             SleepScreen()
+        }
+        composable(Destinations.SETTINGS) {
+            SettingsScreen(onBack = { navController.popBackStack() })
         }
     }
 }

@@ -7,8 +7,6 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wakeproof.alarm.WakeProofApplication
 import com.wakeproof.alarm.presentation.theme.WakeProofTheme
@@ -16,15 +14,19 @@ import com.wakeproof.alarm.service.RingingService
 import com.wakeproof.alarm.service.RingingSession
 
 /**
- * Full-screen ringing activity (spec 4.1.3, stage 2): launched by the
+ * Full-screen ringing activity (spec 4.1.3): launched by the
  * full-screen intent of the FGS notification, shown over the lock
- * screen with the screen turned on. Back does nothing, and leaving the
- * app makes the service bring the screen back within 2 seconds and
- * accelerate the volume ramp.
+ * screen with the screen turned on. Back does nothing, and leaving
+ * the app makes the service bring the screen back within 2 seconds
+ * and accelerate the volume ramp (stage 2).
  *
- * Stage 4 replaces the temporary "Выключить" button with the task flow.
+ * Stage 4: the alarm is dismissed ONLY by solving the task queue or
+ * through the emergency exit; the summary and emergency-done screens
+ * stay on screen after the sound has stopped.
  */
 class RingingActivity : ComponentActivity() {
+
+    private var alarmId: Long = -1L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,28 +38,41 @@ class RingingActivity : ComponentActivity() {
         setTurnScreenOn(true)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        val alarmId = readAlarmId(intent)
+        alarmId = readAlarmId(intent)
         setContent {
             WakeProofTheme {
+                val container = (application as WakeProofApplication).appContainer
                 val viewModel: RingingViewModel = viewModel(
                     factory = RingingViewModel.factory(
                         alarmId,
-                        (application as WakeProofApplication).appContainer.alarmRepository
+                        container.alarmRepository,
+                        container.taskSessionRepository,
+                        container.emergencyPhraseRepository
                     )
                 )
-                val uiState by viewModel.uiState.collectAsState()
 
                 LaunchedEffect(Unit) {
                     viewModel.eventsFlow.collect { event ->
-                        if (event is RingingEvent.AlarmGone) {
-                            dismiss(alarmId)
+                        when (event) {
+                            RingingEvent.AlarmGone -> {
+                                // Alarm deleted mid-ring (or no id):
+                                // stop everything and close.
+                                startService(RingingService.dismissIntent(this@RingingActivity, alarmId))
+                                finish()
+                            }
+                            RingingEvent.StopRinging -> {
+                                // Tasks solved / emergency exit: stop the
+                                // sound + notification and re-arm the alarm,
+                                // but keep the UI (summary) on screen.
+                                startService(RingingService.dismissIntent(this@RingingActivity, alarmId))
+                            }
                         }
                     }
                 }
 
                 RingingScreen(
-                    alarmTimeLabel = uiState.alarmTimeLabel,
-                    onDismiss = { dismiss(alarmId) }
+                    viewModel = viewModel,
+                    onCloseUi = { finish() }
                 )
             }
         }
@@ -66,6 +81,7 @@ class RingingActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        alarmId = readAlarmId(intent)
     }
 
     override fun onStart() {
@@ -76,15 +92,6 @@ class RingingActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
         RingingSession.onUiHidden()
-    }
-
-    /**
-     * Temporary dismiss (stage 2): tell the service to stop ringing,
-     * remove the notification and re-arm the alarm; then finish.
-     */
-    private fun dismiss(alarmId: Long) {
-        startService(RingingService.dismissIntent(this, alarmId))
-        finish()
     }
 
     private fun readAlarmId(intent: Intent?): Long =

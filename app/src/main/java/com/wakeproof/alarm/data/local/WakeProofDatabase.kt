@@ -5,7 +5,11 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.wakeproof.alarm.data.local.dao.AlarmDao
+import com.wakeproof.alarm.data.local.dao.EmergencyPhraseDao
+import com.wakeproof.alarm.data.local.dao.TaskSessionDao
 import com.wakeproof.alarm.data.local.entity.AlarmEntity
+import com.wakeproof.alarm.data.local.entity.EmergencyPhraseEntity
+import com.wakeproof.alarm.data.local.entity.TaskSessionEntity
 
 /**
  * Room database for WakeProof.
@@ -13,15 +17,26 @@ import com.wakeproof.alarm.data.local.entity.AlarmEntity
  * Version 1 was the stage-0 skeleton with only a placeholder table.
  * Version 2 adds the real alarms table (spec 4.1.1) and drops the
  * placeholder; see [MIGRATION_1_2].
+ * Version 3 adds the task_sessions table (spec 4.1.4 / 6) and the
+ * single-row emergency_phrase storage (spec 4.1.4); see
+ * [MIGRATION_2_3].
  */
 @Database(
-    entities = [AlarmEntity::class],
-    version = 2,
+    entities = [
+        AlarmEntity::class,
+        TaskSessionEntity::class,
+        EmergencyPhraseEntity::class
+    ],
+    version = 3,
     exportSchema = false
 )
 abstract class WakeProofDatabase : RoomDatabase() {
 
     abstract fun alarmDao(): AlarmDao
+
+    abstract fun taskSessionDao(): TaskSessionDao
+
+    abstract fun emergencyPhraseDao(): EmergencyPhraseDao
 
     companion object {
         const val NAME = "wakeproof.db"
@@ -55,5 +70,39 @@ abstract class WakeProofDatabase : RoomDatabase() {
                 )
             }
         }
+
+        /**
+         * 2 -> 3: ringing session log (spec 4.1.4 / 6) and the local
+         * emergency phrase storage (spec 4.1.4). Column shapes match the
+         * entities exactly, including the alarmId index.
+         */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `task_sessions` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`alarmId` INTEGER NOT NULL, " +
+                        "`startedAt` INTEGER NOT NULL, " +
+                        "`finishedAt` INTEGER NOT NULL, " +
+                        "`result` TEXT NOT NULL, " +
+                        "`mistakes` INTEGER NOT NULL, " +
+                        "`durationMs` INTEGER NOT NULL, " +
+                        "`taskResults` TEXT NOT NULL" +
+                        ")"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_task_sessions_alarmId` " +
+                        "ON `task_sessions` (`alarmId`)"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `emergency_phrase` (" +
+                        "`id` INTEGER PRIMARY KEY NOT NULL, " +
+                        "`phrase` TEXT NOT NULL, " +
+                        "`generatedAt` INTEGER NOT NULL" +
+                        ")"
+                )
+            }
+        }
     }
 }
+

@@ -6,6 +6,7 @@
     <string name="screen_alarms_title">Будильники</string>
     <string name="screen_stats_title">Статистика</string>
     <string name="screen_sleep_title">Сон</string>
+    <string name="screen_settings_title">Настройки</string>
 
     <!-- Alarms screen -->
     <string name="alarms_empty_title">Будильников нет</string>
@@ -52,11 +53,13 @@
     <string name="editor_delete_confirm_text">Будильник будет удалён безвозвратно</string>
     <string name="dialog_delete">Удалить</string>
     <string name="dialog_cancel">Отмена</string>
+    <string name="dialog_regenerate">Перегенерировать</string>
 
     <!-- Content descriptions -->
     <string name="cd_add_alarm">Добавить будильник</string>
     <string name="cd_open_stats">Открыть статистику</string>
     <string name="cd_open_sleep">Открыть экран сна</string>
+    <string name="cd_open_settings">Открыть настройки</string>
 
     <!-- Stubs -->
     <string name="stats_stub_text">Здесь появятся серия, график баллов и экспорт CSV</string>
@@ -68,6 +71,260 @@
     <string name="ringing_notification_title">Будильник</string>
     <string name="ringing_notification_text">Пора просыпаться</string>
     <string name="ringing_alarm_at">Будильник · %1$s</string>
-    <string name="ringing_dismiss">Выключить</string>
-    <string name="cd_ringing_dismiss">Выключить будильник</string>
+
+    <!-- Ringing task queue (spec 4.1.3 / 4.2) -->
+    <string name="ringing_task_progress">Задача %1$d из %2$d</string>
+    <plurals name="ringing_mistakes">
+        <item quantity="one">%1$d ошибка</item>
+        <item quantity="few">%1$d ошибки</item>
+        <item quantity="many">%1$d ошибок</item>
+        <item quantity="other">%1$d ошибок</item>
+    </plurals>
+    <string name="streak_dot_filled">●</string>
+    <string name="streak_dot_empty">○</string>
+
+    <!-- Task colors (КРАСНЫЙ, ЗЕЛЁНЫЙ, СИНИЙ, ЖЁЛТЫЙ) -->
+    <string name="task_color_red">КРАСНЫЙ</string>
+    <string name="task_color_green">ЗЕЛЁНЫЙ</string>
+    <string name="task_color_blue">СИНИЙ</string>
+    <string name="task_color_yellow">ЖЁЛТЫЙ</string>
+
+    <!-- Math task -->
+    <string name="math_answer_placeholder">?</string>
+    <string name="keypad_backspace">⌫</string>
+    <string name="keypad_ok">OK</string>
+
+    <!-- Memory task -->
+    <string name="memory_watch_hint">Запомните порядок</string>
+    <string name="memory_repeat_hint">Повторите порядок</string>
+
+    <!-- Stroop task -->
+    <string name="stroop_hint">Нажмите цвет, которым написано слово</string>
+
+    <!-- Morning summary (spec 4.1.3) -->
+    <string name="summary_good_morning">☀️ Доброе утро!</string>
+    <string name="summary_tasks_line">⏱ Задачи: %1$s · ошибок: %2$d</string>
+    <string name="summary_close">Закрыть</string>
+
+    <!-- Emergency exit (spec 4.1.4) -->
+    <string name="emergency_title">Аварийный выход</string>
+    <string name="emergency_input_hint">Введите фразу</string>
+    <string name="emergency_wrong">Неверная фраза. Попробуйте ещё раз</string>
+    <string name="emergency_button">Выключить будильник</string>
+    <string name="emergency_back">Вернуться к задачам</string>
+    <string name="emergency_done_title">Будильник выключен</string>
+    <string name="emergency_done_text">Аварийный выход выполнен</string>
+
+    <!-- Settings → Emergency exit (spec 4.1.4) -->
+    <string name="settings_emergency_title">Аварийный выход</string>
+    <string name="settings_emergency_hint">Если будильник нужно срочно выключить: удерживайте скрытый угол вверху справа на экране звонка 5 секунд и введите эту фразу. Фраза хранится только на устройстве.</string>
+    <string name="settings_emergency_loading">Фраза создаётся…</string>
+    <string name="settings_emergency_regenerate">Перегенерировать фразу</string>
+    <string name="settings_emergency_regenerating">Создаём новую фразу…</string>
+    <string name="settings_emergency_regenerate_title">Перегенерировать фразу?</string>
+    <string name="settings_emergency_regenerate_text">Старая фраза перестанет работать. Новую нужно будет ввести при следующем аварийном выходе.</string>
+
+    <!-- Emergency phrase dictionary: ~200 simple Russian words (spec 4.1.4) -->
+    <string-array name="emergency_phrase_dictionary">
+        <item>автобус</item>
+        <item>альбом</item>
+        <item>ананас</item>
+        <item>апрель</item>
+        <item>арбуз</item>
+        <item>атлас</item>
+        <item>багаж</item>
+        <item>балкон</item>
+        <item>банан</item>
+        <item>барабан</item>
+        <item>бабочка</item>
+        <item>берег</item>
+        <item>береза</item>
+        <item>бинокль</item>
+        <item>билет</item>
+        <item>блин</item>
+        <item>ботинок</item>
+        <item>бревно</item>
+        <item>бублик</item>
+        <item>буква</item>
+        <item>бумага</item>
+        <item>буран</item>
+        <item>вагон</item>
+        <item>валенок</item>
+        <item>ванна</item>
+        <item>василек</item>
+        <item>вафля</item>
+        <item>веник</item>
+        <item>верблюд</item>
+        <item>вечер</item>
+        <item>ведро</item>
+        <item>велосипед</item>
+        <item>виноград</item>
+        <item>вишня</item>
+        <item>вокзал</item>
+        <item>воздух</item>
+        <item>волна</item>
+        <item>воробей</item>
+        <item>ворота</item>
+        <item>восход</item>
+        <item>гараж</item>
+        <item>гвоздь</item>
+        <item>герой</item>
+        <item>гитара</item>
+        <item>глобус</item>
+        <item>голубь</item>
+        <item>гора</item>
+        <item>горох</item>
+        <item>город</item>
+        <item>гранат</item>
+        <item>гриб</item>
+        <item>гроза</item>
+        <item>груша</item>
+        <item>дыня</item>
+        <item>дождь</item>
+        <item>дуб</item>
+        <item>жираф</item>
+        <item>желудь</item>
+        <item>жемчуг</item>
+        <item>жук</item>
+        <item>забор</item>
+        <item>загар</item>
+        <item>закат</item>
+        <item>замок</item>
+        <item>заря</item>
+        <item>звезда</item>
+        <item>зебра</item>
+        <item>зима</item>
+        <item>зонт</item>
+        <item>изюм</item>
+        <item>иней</item>
+        <item>искра</item>
+        <item>июль</item>
+        <item>кактус</item>
+        <item>календарь</item>
+        <item>камень</item>
+        <item>канал</item>
+        <item>карандаш</item>
+        <item>карась</item>
+        <item>карта</item>
+        <item>качели</item>
+        <item>кекс</item>
+        <item>кенгуру</item>
+        <item>кефир</item>
+        <item>кисель</item>
+        <item>кит</item>
+        <item>клад</item>
+        <item>клубника</item>
+        <item>ковер</item>
+        <item>колокол</item>
+        <item>комар</item>
+        <item>компас</item>
+        <item>конверт</item>
+        <item>корабль</item>
+        <item>корзина</item>
+        <item>корень</item>
+        <item>космос</item>
+        <item>кофе</item>
+        <item>краб</item>
+        <item>кран</item>
+        <item>крокодил</item>
+        <item>кувшин</item>
+        <item>курица</item>
+        <item>лаванда</item>
+        <item>лампа</item>
+        <item>ландыш</item>
+        <item>лето</item>
+        <item>лимон</item>
+        <item>линза</item>
+        <item>лиса</item>
+        <item>листопад</item>
+        <item>лопата</item>
+        <item>лось</item>
+        <item>луна</item>
+        <item>лыжи</item>
+        <item>магнит</item>
+        <item>майка</item>
+        <item>мандарин</item>
+        <item>марка</item>
+        <item>мед</item>
+        <item>медведь</item>
+        <item>месяц</item>
+        <item>метро</item>
+        <item>море</item>
+        <item>мороз</item>
+        <item>мост</item>
+        <item>музей</item>
+        <item>мука</item>
+        <item>музыка</item>
+        <item>мыло</item>
+        <item>ножницы</item>
+        <item>ноябрь</item>
+        <item>облако</item>
+        <item>океан</item>
+        <item>огонь</item>
+        <item>окно</item>
+        <item>орех</item>
+        <item>осень</item>
+        <item>остров</item>
+        <item>очки</item>
+        <item>пальма</item>
+        <item>парус</item>
+        <item>паркет</item>
+        <item>песок</item>
+        <item>перец</item>
+        <item>пенал</item>
+        <item>пингвин</item>
+        <item>письмо</item>
+        <item>пирог</item>
+        <item>платок</item>
+        <item>платье</item>
+        <item>площадь</item>
+        <item>погода</item>
+        <item>подарок</item>
+        <item>подушка</item>
+        <item>полдень</item>
+        <item>поле</item>
+        <item>помидор</item>
+        <item>портфель</item>
+        <item>посуда</item>
+        <item>поток</item>
+        <item>почта</item>
+        <item>пояс</item>
+        <item>пруд</item>
+        <item>пчела</item>
+        <item>пшеница</item>
+        <item>пятно</item>
+        <item>радио</item>
+        <item>радуга</item>
+        <item>ракета</item>
+        <item>ракушка</item>
+        <item>река</item>
+        <item>ремень</item>
+        <item>рис</item>
+        <item>робот</item>
+        <item>родник</item>
+        <item>рояль</item>
+        <item>рубашка</item>
+        <item>рюкзак</item>
+        <item>салют</item>
+        <item>самовар</item>
+        <item>север</item>
+        <item>сирень</item>
+        <item>скала</item>
+        <item>скафандр</item>
+        <item>солнце</item>
+        <item>сосна</item>
+        <item>сугроб</item>
+        <item>сумка</item>
+        <item>сухарь</item>
+        <item>телевизор</item>
+        <item>телефон</item>
+        <item>тетрадь</item>
+        <item>тигр</item>
+        <item>топор</item>
+        <item>трактор</item>
+        <item>трамвай</item>
+        <item>тюльпан</item>
+        <item>урожай</item>
+        <item>фарфор</item>
+    </string-array>
 </resources>

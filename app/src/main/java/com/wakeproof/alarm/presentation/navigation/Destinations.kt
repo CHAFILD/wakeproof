@@ -14,6 +14,7 @@ object Destinations {
     const val ALARMS = "alarms"
     const val STATS = "stats"
     const val SLEEP = "sleep"
+    const val SETTINGS = "settings"
     const val ALARM_EDITOR = "alarm_editor?$ARG_ALARM_ID={$ARG_ALARM_ID}"
 
     /** Route to the editor for an existing alarm or a new one. */

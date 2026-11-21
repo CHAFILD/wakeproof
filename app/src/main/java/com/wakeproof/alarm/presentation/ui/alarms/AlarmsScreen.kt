@@ -53,6 +53,7 @@ import java.util.Locale
 fun AlarmsScreen(
     onOpenStats: () -> Unit,
     onOpenSleep: () -> Unit,
+    onOpenSettings: () -> Unit,
     onOpenEditor: (Long) -> Unit,
     viewModel: AlarmsViewModel = viewModel(
         factory = AlarmsViewModel.factory(
@@ -79,6 +80,12 @@ fun AlarmsScreen(
                         Icon(
                             painter = painterResource(R.drawable.ic_sleep),
                             contentDescription = stringResource(R.string.cd_open_sleep)
+                        )
+                    }
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_settings),
+                            contentDescription = stringResource(R.string.cd_open_settings)
                         )
                     }
                 },
