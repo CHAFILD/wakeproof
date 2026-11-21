@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+      DEBUG-ONLY overlay (never merged into release): makes the ringing
+      service exported so `adb shell am start-foreground-service` can ring
+      a test alarm without waiting for a real schedule. Driving the exact
+      ringing flow from adb is how the stage-2 behaviour (screen return
+      after Home, volume ramp) is verified on an emulator.
+    -->
+    <application>
+        <service
+            android:name=".service.RingingService"
+            android:exported="true"
+            tools:replace="android:exported" />
+    </application>
+
+</manifest>

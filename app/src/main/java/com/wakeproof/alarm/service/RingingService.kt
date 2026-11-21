@@ -17,6 +17,7 @@ import androidx.core.app.ServiceCompat
 import com.wakeproof.alarm.R
 import com.wakeproof.alarm.WakeProofApplication
 import com.wakeproof.alarm.domain.audio.VolumeRamp
+import com.wakeproof.alarm.presentation.ui.ringing.RingingActivity
 import com.wakeproof.alarm.util.AlarmNotifications
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -315,9 +316,24 @@ class RingingService : Service() {
                 if (!RingingSession.isRingingUiVisible.value && isRinging) {
                     Log.i(TAG, "Ringing UI lost, accelerating ramp and re-firing FSI")
                     accelerateRamp()
+                    // Screen off / locked: the system launches the
+                    // full-screen intent by itself.
                     AlarmNotifications.repostRinging(this@RingingService, alarmId)
+                    // Screen on and unlocked: the platform downgrades the
+                    // full-screen intent to a heads-up banner, so also try
+                    // bringing the activity forward directly. Denials are
+                    // expected on some versions and are ignored.
+                    bringRingingUiToFront()
                 }
             }
+        }
+    }
+
+    private fun bringRingingUiToFront() {
+        try {
+            startActivity(RingingActivity.launchIntent(this, alarmId))
+        } catch (t: Throwable) {
+            Log.w(TAG, "Direct ringing UI launch not allowed: ${t.message}")
         }
     }
 
