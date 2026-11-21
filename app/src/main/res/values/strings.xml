@@ -108,6 +108,7 @@
 
     <!-- Emergency exit (spec 4.1.4) -->
     <string name="emergency_title">Аварийный выход</string>
+    <string name="cd_emergency_corner">Аварийный выход — удерживайте 5 секунд</string>
     <string name="emergency_input_hint">Введите фразу</string>
     <string name="emergency_wrong">Неверная фраза. Попробуйте ещё раз</string>
     <string name="emergency_button">Выключить будильник</string>

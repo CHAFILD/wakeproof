@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -33,14 +34,17 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
 import com.wakeproof.alarm.R
 import kotlinx.coroutines.delay
 
 /**
- * The hidden emergency zone (spec 4.1.4): a ~48dp fully transparent
- * corner that must be held for 5 seconds. A thin progress line is the
- * only feedback, so the exit stays out of sight of a sleepy user but
- * is discoverable when needed.
+ * The emergency exit zone (spec 4.1.4): the top-right corner of the
+ * ringing screen, held for 5 seconds. A small semi-transparent warning
+ * triangle makes the zone discoverable (product decision: a fully
+ * invisible corner was too hard to hit); holding brightens the icon
+ * and runs a thin progress line under it. Releasing early cancels.
  */
 @Composable
 fun EmergencyCorner(
@@ -66,7 +70,7 @@ fun EmergencyCorner(
 
     Box(
         modifier = modifier
-            .size(48.dp)
+            .size(CORNER_SIZE_DP.dp)
             .pointerInput(Unit) {
                 detectTapGestures(
                     onPress = {
@@ -76,13 +80,22 @@ fun EmergencyCorner(
                     }
                 )
             },
-        contentAlignment = Alignment.BottomCenter
+        contentAlignment = Alignment.Center
     ) {
-        // Thin 2dp progress line across the corner while holding.
+        Icon(
+            imageVector = Icons.Filled.Warning,
+            contentDescription = stringResource(R.string.cd_emergency_corner),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                alpha = if (isHeld) 1f else IDLE_ICON_ALPHA
+            ),
+            modifier = Modifier.size(30.dp)
+        )
+        // Thin progress line at the bottom edge while holding.
         Box(
             modifier = Modifier
-                .width(48.dp * progress)
-                .height(2.dp)
+                .align(Alignment.BottomCenter)
+                .width((CORNER_SIZE_DP - 8).dp * progress)
+                .height(3.dp)
                 .background(MaterialTheme.colorScheme.primary)
         )
     }
@@ -215,3 +228,9 @@ fun EmergencyDoneContent(onCloseUi: () -> Unit) {
 
 private const val HOLD_DURATION_MS = 5_000L
 private const val HOLD_STEP_MS = 50L
+
+/** Touch zone of the emergency corner (spec 4.1.4: small area). */
+private const val CORNER_SIZE_DP = 64
+
+/** Idle visibility of the warning triangle: noticeable, not shouting. */
+private const val IDLE_ICON_ALPHA = 0.45f
