@@ -63,19 +63,24 @@
             android:name=".receiver.AlarmReceiver"
             android:exported="false" />
 
+        <!-- Exported because BOOT_COMPLETED is a protected broadcast only
+             the system can send; non-exported receivers are skipped by the
+             broadcast resolver for implicit system broadcasts. -->
         <receiver
             android:name=".receiver.BootReceiver"
             android:enabled="true"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
 
+        <!-- Exported for the same reason: TIME_SET / TIMEZONE_CHANGED are
+             protected system-only broadcasts. -->
         <receiver
             android:name=".receiver.TimeChangedReceiver"
             android:enabled="true"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
                 <action android:name="android.intent.action.TIME_SET" />
