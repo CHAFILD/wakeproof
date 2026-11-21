@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Base dark theme shown before Compose takes over. The app is always
+      dark, so the window background matches the Compose background color
+      to avoid a white flash at startup (important at night).
+    -->
+    <style name="Theme.WakeProof" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/wakeproof_background</item>
+        <item name="android:statusBarColor">@color/wakeproof_background</item>
+        <item name="android:navigationBarColor">@color/wakeproof_background</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

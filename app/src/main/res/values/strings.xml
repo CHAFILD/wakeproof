@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WakeProof</string>
+
+    <!-- Screen titles -->
+    <string name="screen_alarms_title">Будильники</string>
+    <string name="screen_stats_title">Статистика</string>
+    <string name="screen_sleep_title">Сон</string>
+
+    <!-- Alarms screen -->
+    <string name="alarms_empty_title">Будильников нет</string>
+    <string name="alarms_empty_hint">Нажмите «+», чтобы создать первый будильник</string>
+
+    <!-- Content descriptions -->
+    <string name="cd_add_alarm">Добавить будильник</string>
+    <string name="cd_open_stats">Открыть статистику</string>
+    <string name="cd_open_sleep">Открыть экран сна</string>
+
+    <!-- Stubs -->
+    <string name="stats_stub_text">Здесь появятся серия, график баллов и экспорт CSV</string>
+    <string name="sleep_stub_text">Здесь появятся ночи записи сна и избранные фрагменты</string>
+</resources>
