@@ -10,3 +10,6 @@
 local.properties
 /app/build
 /.kotlin
+
+# Local verification screenshots (not part of the codebase)
+/stage*_*.png

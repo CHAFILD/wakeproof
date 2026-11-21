@@ -192,7 +192,13 @@ private fun TimeSection(
     LaunchedEffect(timeState.hour, timeState.minute) {
         viewModel.onTimeChanged(timeState.hour, timeState.minute)
     }
-    TimePicker(state = timeState)
+    // Center the picker on the screen: by default it hugs the left edge.
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center
+    ) {
+        TimePicker(state = timeState)
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
