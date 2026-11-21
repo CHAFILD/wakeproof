@@ -66,6 +66,8 @@ fun RingingScreen(
                 RingingPhase.TASKS -> TasksContent(
                     task = uiState.task,
                     alarmTimeLabel = uiState.alarmTimeLabel,
+                    isSnoozeAvailable = uiState.isSnoozeAvailable,
+                    onSnooze = viewModel::onSnoozePressed,
                     onMathSubmit = viewModel::onMathSubmit,
                     onMemorySequence = viewModel::currentMemorySequence,
                     onMemorySequenceShown = viewModel::onMemorySequenceShown,

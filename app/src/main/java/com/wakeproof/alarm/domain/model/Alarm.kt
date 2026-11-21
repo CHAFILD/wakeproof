@@ -35,7 +35,19 @@ data class Alarm(
     /** Spec 4.8.1 default: sleep reminder enabled. */
     val isSleepReminderEnabled: Boolean = true,
     /** Spec 4.8.1 allowed range 6-9 hours, default 8. */
-    val sleepTargetHours: Int = SLEEP_TARGET_DEFAULT_HOURS
+    val sleepTargetHours: Int = SLEEP_TARGET_DEFAULT_HOURS,
+    // --- Snooze state (spec 4.1.2), transitions in SnoozeMachine. ---
+
+    /** Epoch ms when the armed snoozed ring must fire; 0 = none armed. */
+    val snoozeTargetAt: Long = 0L,
+    /** Snooze limit of the current firing already consumed. */
+    val isSnoozeUsed: Boolean = false,
+    /** Task count fixed for the armed snoozed session; 0 = not set. */
+    val snoozeSessionTaskCount: Int = 0,
+    /** Difficulty fixed for the armed snoozed session; null = not set. */
+    val snoozeSessionDifficulty: Difficulty? = null,
+    /** Morning session row the snoozed ring continues; 0 = none. */
+    val snoozeSessionId: Long = 0L
 ) {
     companion object {
         const val DEFAULT_HOUR = 7

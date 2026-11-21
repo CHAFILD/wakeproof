@@ -50,6 +50,10 @@ class AlarmSchedulerImpl(
             cancel(alarm.id)
             return
         }
+        if (alarm.snoozeTargetAt > 0) {
+            scheduleSnooze(alarm)
+            return
+        }
         val now = LocalDateTime.now()
         val nextTrigger = NextTriggerCalculator.nextTriggerDateTime(alarm, now)
         if (nextTrigger == null) {
@@ -68,6 +72,24 @@ class AlarmSchedulerImpl(
         )
         synchronized(scheduledIds) { scheduledIds.add(alarm.id) }
         Log.i(TAG, "Scheduled alarm id=${alarm.id} at $nextTrigger")
+    }
+
+    /**
+     * Arms the snoozed ring (spec 4.1.2): the alarm fires at the fixed
+     * epoch target instead of its regular occurrence. The same alarm id
+     * PendingIntent slot is reused, so this replaces the regular
+     * schedule; the receiver re-arms the regular occurrence when the
+     * snoozed ring fires. A target already in the past (device was off)
+     * fires immediately - a snooze is never silently lost.
+     */
+    private fun scheduleSnooze(alarm: Alarm) {
+        val fireIntent = alarmPendingIntent(alarm.id)
+        alarmManager?.setAlarmClock(
+            AlarmManager.AlarmClockInfo(alarm.snoozeTargetAt, showIntentFactory(alarm.id)),
+            fireIntent
+        )
+        synchronized(scheduledIds) { scheduledIds.add(alarm.id) }
+        Log.i(TAG, "Scheduled snoozed ring id=${alarm.id} at ${alarm.snoozeTargetAt}")
     }
 
     override fun cancel(alarmId: Long) {

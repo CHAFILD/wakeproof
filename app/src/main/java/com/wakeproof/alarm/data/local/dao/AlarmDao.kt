@@ -28,4 +28,26 @@ interface AlarmDao {
 
     @Query("UPDATE ${AlarmEntity.TABLE_NAME} SET isEnabled = :enabled WHERE id = :id")
     suspend fun setEnabled(id: Long, enabled: Boolean)
+
+    /**
+     * Partial update of the snooze-state columns (spec 4.1.2), so a
+     * snooze transition never clobbers a concurrent alarm edit.
+     */
+    @Query(
+        "UPDATE ${AlarmEntity.TABLE_NAME} SET " +
+            "snoozeTargetAt = :targetAt, " +
+            "isSnoozeUsed = :used, " +
+            "snoozeSessionTaskCount = :sessionTaskCount, " +
+            "snoozeSessionDifficulty = :sessionDifficulty, " +
+            "snoozeSessionId = :sessionId " +
+            "WHERE id = :id"
+    )
+    suspend fun updateSnoozeState(
+        id: Long,
+        targetAt: Long,
+        used: Boolean,
+        sessionTaskCount: Int,
+        sessionDifficulty: String?,
+        sessionId: Long
+    )
 }

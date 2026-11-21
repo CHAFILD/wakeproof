@@ -136,4 +136,29 @@ class AlarmMapperTest {
         assertNull(toEntity(withNull).anchorId)
         assertEquals("nfc-007", toDomain(toEntity(withValue)).anchorId)
     }
+
+    @Test
+    fun `snooze state survives round trip`() {
+        val armed = Alarm(
+            id = 3,
+            snoozeTargetAt = 1_742_000_000_000L,
+            isSnoozeUsed = true,
+            snoozeSessionTaskCount = 3,
+            snoozeSessionDifficulty = Difficulty.MEDIUM,
+            snoozeSessionId = 77L
+        )
+        assertEquals(armed, toDomain(toEntity(armed)))
+    }
+
+    @Test
+    fun `unset snooze state maps to clean defaults`() {
+        val plain = Alarm(id = 4)
+        val entity = toEntity(plain)
+        assertEquals(0L, entity.snoozeTargetAt)
+        assertEquals(false, entity.isSnoozeUsed)
+        assertEquals(0, entity.snoozeSessionTaskCount)
+        assertNull(entity.snoozeSessionDifficulty)
+        assertEquals(0L, entity.snoozeSessionId)
+        assertEquals(plain, toDomain(entity))
+    }
 }

@@ -34,6 +34,10 @@ object AlarmMapper {
     fun decodeDifficulty(name: String): Difficulty =
         runCatching { Difficulty.valueOf(name) }.getOrDefault(Difficulty.MEDIUM)
 
+    /** Nullable variant for the snooze-session difficulty (unset = null). */
+    fun decodeDifficultyOrNull(name: String?): Difficulty? =
+        name?.let(::decodeDifficulty)
+
     fun decodeSnoozePolicy(name: String): SnoozePolicy =
         runCatching { SnoozePolicy.valueOf(name) }.getOrDefault(SnoozePolicy.FORBIDDEN)
 
@@ -55,7 +59,12 @@ object AlarmMapper {
         anchorEnabled = entity.anchorEnabled,
         anchorId = entity.anchorId,
         isSleepReminderEnabled = entity.isSleepReminderEnabled,
-        sleepTargetHours = entity.sleepTargetHours
+        sleepTargetHours = entity.sleepTargetHours,
+        snoozeTargetAt = entity.snoozeTargetAt,
+        isSnoozeUsed = entity.isSnoozeUsed,
+        snoozeSessionTaskCount = entity.snoozeSessionTaskCount,
+        snoozeSessionDifficulty = decodeDifficultyOrNull(entity.snoozeSessionDifficulty),
+        snoozeSessionId = entity.snoozeSessionId
     )
 
     fun toEntity(alarm: Alarm): AlarmEntity = AlarmEntity(
@@ -74,7 +83,12 @@ object AlarmMapper {
         anchorEnabled = alarm.anchorEnabled,
         anchorId = alarm.anchorId,
         isSleepReminderEnabled = alarm.isSleepReminderEnabled,
-        sleepTargetHours = alarm.sleepTargetHours
+        sleepTargetHours = alarm.sleepTargetHours,
+        snoozeTargetAt = alarm.snoozeTargetAt,
+        isSnoozeUsed = alarm.isSnoozeUsed,
+        snoozeSessionTaskCount = alarm.snoozeSessionTaskCount,
+        snoozeSessionDifficulty = alarm.snoozeSessionDifficulty?.name,
+        snoozeSessionId = alarm.snoozeSessionId
     )
 
     private infix fun Int.hasBit(bitIndex: Int): Boolean = (this shr bitIndex) and 1 == 1

@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,11 +29,16 @@ import com.wakeproof.alarm.domain.task.TaskColor
  * progress header («Задача 1 из 2» + mistakes) and exactly ONE task
  * block at a time. Big fonts and buttons: the user is half-asleep in
  * the dark.
+ *
+ * The snooze button («+10 мин», spec 4.1.2) sits at the bottom and is
+ * composed ONLY when the alarm's policy allows it - never in HARDCORE.
  */
 @Composable
 fun TasksContent(
     task: TaskUiState?,
     alarmTimeLabel: String?,
+    isSnoozeAvailable: Boolean,
+    onSnooze: () -> Unit,
     onMathSubmit: (Int) -> Boolean,
     onMemorySequence: () -> List<TaskColor>,
     onMemorySequenceShown: () -> Unit,
@@ -68,6 +75,26 @@ fun TasksContent(
                 round = round,
                 onSubmit = onStroopSubmit
             )
+        }
+        if (isSnoozeAvailable) {
+            Spacer(modifier = Modifier.weight(1f))
+            Button(
+                onClick = onSnooze,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(76.dp),
+                shape = MaterialTheme.shapes.large,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            ) {
+                Text(
+                    text = stringResource(R.string.ringing_snooze_button),
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }

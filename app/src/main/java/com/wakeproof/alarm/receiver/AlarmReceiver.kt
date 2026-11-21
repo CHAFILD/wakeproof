@@ -6,14 +6,18 @@ import android.content.Intent
 import android.util.Log
 import androidx.core.content.ContextCompat
 import com.wakeproof.alarm.WakeProofApplication
+import com.wakeproof.alarm.domain.snooze.SnoozeMachine
 import com.wakeproof.alarm.service.RingingService
 import kotlinx.coroutines.launch
 
 /**
  * Fired by AlarmManager when a scheduled alarm triggers (spec 4.1.3).
- * Verifies the alarm still exists and is enabled, immediately arms the
- * next occurrence (so the schedule survives even if this ringing session
- * never completes) and starts the ringing foreground service.
+ * Verifies the alarm still exists and is enabled, applies the snooze
+ * transition of this firing (spec 4.1.2: a snoozed ring consumes the
+ * pending target and keeps the limit; a regular ring resets the limit),
+ * immediately arms the next regular occurrence (so the schedule
+ * survives even if this ringing session never completes) and starts
+ * the ringing foreground service.
  *
  * Starting a mediaPlayback FGS from here is allowed on Android 12+:
  * the app is in the exact-alarm delivery exemption list (setAlarmClock).
@@ -36,8 +40,15 @@ class AlarmReceiver : BroadcastReceiver() {
                     container.alarmScheduler.cancel(alarmId)
                     return@launch
                 }
-                // Arm the next occurrence before ringing starts.
-                container.alarmScheduler.schedule(alarm)
+                // Snooze transition of this firing (spec 4.1.2), then arm
+                // the next REGULAR occurrence before ringing starts.
+                val transitioned = if (alarm.snoozeTargetAt > 0L) {
+                    SnoozeMachine.onSnoozeRingFired(alarm)
+                } else {
+                    SnoozeMachine.onRegularRingFired(alarm)
+                }
+                container.alarmRepository.updateSnoozeState(transitioned)
+                container.alarmScheduler.schedule(transitioned)
                 ContextCompat.startForegroundService(
                     context,
                     RingingService.startIntent(context, alarmId)

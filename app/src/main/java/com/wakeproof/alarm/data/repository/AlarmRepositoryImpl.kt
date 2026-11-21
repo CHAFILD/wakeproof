@@ -29,4 +29,14 @@ class AlarmRepositoryImpl(
 
     override suspend fun setEnabled(id: Long, enabled: Boolean) =
         alarmDao.setEnabled(id, enabled)
+
+    override suspend fun updateSnoozeState(alarm: Alarm) =
+        alarmDao.updateSnoozeState(
+            id = alarm.id,
+            targetAt = alarm.snoozeTargetAt,
+            used = alarm.isSnoozeUsed,
+            sessionTaskCount = alarm.snoozeSessionTaskCount,
+            sessionDifficulty = alarm.snoozeSessionDifficulty?.name,
+            sessionId = alarm.snoozeSessionId
+        )
 }

@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
@@ -34,6 +34,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.wakeproof.alarm.R
@@ -45,8 +46,9 @@ import java.util.Locale
 
 /**
  * Main screen: the alarm list with big time, weekday badges, countdown
- * ("fires in Xh Ym") and an on/off switch. Empty state plus a FAB for
- * creation. Top bar navigates to Stats and Sleep.
+ * ("fires in Xh Ym") and an on/off switch. The streak (spec 4.4) shows
+ * under the nearest enabled alarm. Empty state plus a FAB for creation.
+ * Top bar navigates to Stats and Sleep.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,7 +59,8 @@ fun AlarmsScreen(
     onOpenEditor: (Long) -> Unit,
     viewModel: AlarmsViewModel = viewModel(
         factory = AlarmsViewModel.factory(
-            (LocalContext.current.applicationContext as WakeProofApplication).appContainer.alarmRepository
+            (LocalContext.current.applicationContext as WakeProofApplication).appContainer.alarmRepository,
+            (LocalContext.current.applicationContext as WakeProofApplication).appContainer.taskSessionRepository
         )
     )
 ) {
@@ -116,6 +119,11 @@ fun AlarmsScreen(
                     .padding(innerPadding)
             )
         } else {
+            // Index of the nearest ENABLED alarm: the streak banner
+            // (spec 4.4) renders directly under its card.
+            val nearestIndex = uiState.alarms.indexOfFirst { item ->
+                item.alarm.isEnabled && item.minutesUntilTrigger != null
+            }
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -123,12 +131,17 @@ fun AlarmsScreen(
                 contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(uiState.alarms, key = { it.alarm.id }) { item ->
-                    AlarmCard(
-                        item = item,
-                        onOpen = { onOpenEditor(item.alarm.id) },
-                        onToggle = { enabled -> viewModel.onToggleEnabled(item.alarm, enabled) }
-                    )
+                itemsIndexed(uiState.alarms, key = { _, item -> item.alarm.id }) { index, item ->
+                    Column {
+                        AlarmCard(
+                            item = item,
+                            onOpen = { onOpenEditor(item.alarm.id) },
+                            onToggle = { enabled -> viewModel.onToggleEnabled(item.alarm, enabled) }
+                        )
+                        if (index == nearestIndex) {
+                            StreakBanner(streak = uiState.streak)
+                        }
+                    }
                 }
             }
         }
@@ -227,6 +240,18 @@ private fun nextTriggerLabel(isEnabled: Boolean, minutes: Long?): String = when 
     minutes == null -> stringResource(R.string.alarm_disabled)
     minutes >= 60 -> stringResource(R.string.alarm_next_in_h_m, minutes / 60, minutes % 60)
     else -> stringResource(R.string.alarm_next_in_m, minutes)
+}
+
+/** The streak badge under the nearest alarm (spec 4.4): «🔥 12». */
+@Composable
+private fun StreakBanner(streak: Int) {
+    Text(
+        text = stringResource(R.string.streak_badge, streak),
+        style = MaterialTheme.typography.headlineSmall,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(top = 4.dp)
+    )
 }
 
 @Composable

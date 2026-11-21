@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.wakeproof.alarm.domain.model.Alarm
 import com.wakeproof.alarm.domain.repository.AlarmRepository
+import com.wakeproof.alarm.domain.repository.TaskSessionRepository
+import com.wakeproof.alarm.domain.streak.StreakCalculator
 import com.wakeproof.alarm.domain.time.NextTriggerCalculator
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -27,10 +29,13 @@ data class AlarmListItem(
 )
 
 /**
- * UI state of the main (alarms) screen.
+ * UI state of the main (alarms) screen. [streak] is the number of
+ * consecutive CLEAN mornings (spec 4.4) and is rendered under the
+ * nearest alarm.
  */
 data class AlarmsUiState(
-    val alarms: List<AlarmListItem> = emptyList()
+    val alarms: List<AlarmListItem> = emptyList(),
+    val streak: Int = 0
 )
 
 /**
@@ -40,6 +45,7 @@ data class AlarmsUiState(
  */
 class AlarmsViewModel(
     private val alarmRepository: AlarmRepository,
+    private val taskSessionRepository: TaskSessionRepository,
     private val clock: Clock
 ) : ViewModel() {
 
@@ -51,7 +57,11 @@ class AlarmsViewModel(
     }
 
     val uiState: StateFlow<AlarmsUiState> =
-        combine(alarmRepository.observeAlarms(), minuteTicker) { alarms, _ ->
+        combine(
+            alarmRepository.observeAlarms(),
+            taskSessionRepository.observeSessions(),
+            minuteTicker
+        ) { alarms, sessions, _ ->
             val now = LocalDateTime.now(clock)
             AlarmsUiState(
                 alarms = alarms.map { alarm ->
@@ -59,7 +69,8 @@ class AlarmsViewModel(
                         alarm = alarm,
                         minutesUntilTrigger = NextTriggerCalculator.minutesUntilTrigger(alarm, now)
                     )
-                }
+                },
+                streak = StreakCalculator.currentStreak(sessions)
             )
         }.stateIn(
             scope = viewModelScope,
@@ -75,11 +86,18 @@ class AlarmsViewModel(
     }
 
     companion object {
-        fun factory(repository: AlarmRepository): ViewModelProvider.Factory =
+        fun factory(
+            repository: AlarmRepository,
+            taskSessionRepository: TaskSessionRepository
+        ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                    AlarmsViewModel(repository, Clock.systemDefaultZone()) as T
+                    AlarmsViewModel(
+                        repository,
+                        taskSessionRepository,
+                        Clock.systemDefaultZone()
+                    ) as T
             }
 
         private const val TICK_PERIOD_MS = 60_000L

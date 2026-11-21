@@ -35,7 +35,11 @@ class AppContainer(context: Context) {
             WakeProofDatabase::class.java,
             WakeProofDatabase.NAME
         )
-            .addMigrations(WakeProofDatabase.MIGRATION_1_2, WakeProofDatabase.MIGRATION_2_3)
+            .addMigrations(
+                WakeProofDatabase.MIGRATION_1_2,
+                WakeProofDatabase.MIGRATION_2_3,
+                WakeProofDatabase.MIGRATION_3_4
+            )
             .build()
     }
 

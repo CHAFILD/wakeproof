@@ -11,8 +11,11 @@ import com.wakeproof.alarm.domain.repository.EmergencyPhraseRepository
 import com.wakeproof.alarm.domain.repository.TaskSessionRepository
 import com.wakeproof.alarm.domain.session.AnswerOutcome
 import com.wakeproof.alarm.domain.session.RoundState
+import com.wakeproof.alarm.domain.session.SessionParamsResolver
 import com.wakeproof.alarm.domain.session.TaskSessionEngine
 import com.wakeproof.alarm.domain.session.TaskSessionRecorder
+import com.wakeproof.alarm.domain.snooze.SnoozeMachine
+import com.wakeproof.alarm.domain.streak.StreakCalculator
 import com.wakeproof.alarm.domain.task.TaskColor
 import java.util.Locale
 import kotlinx.coroutines.channels.Channel
@@ -61,7 +64,9 @@ data class TaskUiState(
 data class SummaryUiState(
     /** Sum of the solved tasks' durations. */
     val solveTimeMs: Long,
-    val mistakes: Int
+    val mistakes: Int,
+    /** Streak including the morning that just finished (spec 4.4). */
+    val streakMornings: Int
 )
 
 data class RingingUiState(
@@ -71,6 +76,8 @@ data class RingingUiState(
     val phase: RingingPhase = RingingPhase.LOADING,
     val task: TaskUiState? = null,
     val summary: SummaryUiState? = null,
+    /** True when the ring screen may show the snooze button (spec 4.1.2). */
+    val isSnoozeAvailable: Boolean = false,
     /** The phrase shown as a small gray hint on the emergency screen. */
     val emergencyHintPhrase: String? = null,
     val isEmergencyPhraseWrong: Boolean = false
@@ -87,6 +94,12 @@ sealed interface RingingEvent {
      * (summary / emergency-done screens).
      */
     data object StopRinging : RingingEvent
+
+    /**
+     * Snooze pressed (spec 4.1.2): the session is stored as SNOOZED,
+     * the ring is re-armed for +10 minutes; the ringing UI closes.
+     */
+    data object SnoozeArmed : RingingEvent
 }
 
 /**
@@ -110,6 +123,12 @@ class RingingViewModel(
     private var engine: TaskSessionEngine? = null
     private var recorder: TaskSessionRecorder? = null
 
+    /** The alarm this ring belongs to; needed by the snooze decision. */
+    private var loadedAlarm: Alarm? = null
+
+    /** Guards a double tap on the snooze button. */
+    private var isSnoozeInFlight = false
+
     init {
         viewModelScope.launch {
             if (alarmId <= 0L) {
@@ -128,21 +147,72 @@ class RingingViewModel(
     }
 
     private fun startSession(alarm: Alarm) {
-        val newEngine = TaskSessionEngine(
+        loadedAlarm = alarm
+        // Spec 4.2.1: HARDCORE always rings with 4 tasks; an armed
+        // snoozed ring uses the parameters fixed at snooze time (spec
+        // 4.1.2: same params for ONCE, +1 task / one level up for
+        // ONCE_HARDER).
+        val sessionParams = SessionParamsResolver.resolve(alarm)
+        // A snoozed ring continues the SAME morning session row (spec
+        // 1.5: session = from firing to dismissal; a snoozed morning
+        // stays SNOOZED even when the repeated ring is solved).
+        val isSnoozeRing = alarm.snoozeSessionId > 0L
+        engine = TaskSessionEngine(
             selectedTypes = alarm.taskTypes,
-            taskCount = alarm.taskCount,
-            difficulty = alarm.difficulty
+            taskCount = sessionParams.taskCount,
+            difficulty = sessionParams.difficulty
         )
-        engine = newEngine
-        recorder = TaskSessionRecorder(alarmId, taskSessionRepository)
+        recorder = TaskSessionRecorder(
+            alarmId = alarmId,
+            repository = taskSessionRepository,
+            continuationOf = if (isSnoozeRing) alarm.snoozeSessionId else 0L
+        )
         _uiState.update {
             it.copy(
                 isLoaded = true,
                 alarmTimeLabel = formatTime(alarm.hour, alarm.minute),
-                phase = RingingPhase.TASKS
+                phase = RingingPhase.TASKS,
+                // Spec 4.1.2: the snooze button appears only when the
+                // policy allows it and the once-per-firing limit is
+                // intact; HARDCORE never shows it.
+                isSnoozeAvailable = SnoozeMachine.canSnooze(alarm)
             )
         }
         publishTasksState()
+    }
+
+    // --- Snooze (spec 4.1.2) ----------------------------------------------------
+
+    /**
+     * The +10 minutes button: stores the morning session as SNOOZED,
+     * fixes the snoozed-session parameters and the 10-minute target in
+     * Room (reboot/process-death proof), then stops the ringing - the
+     * service's dismiss re-arm schedules the snooze target because the
+     * alarm row now carries it.
+     */
+    fun onSnoozePressed() {
+        val alarm = loadedAlarm ?: return
+        if (_uiState.value.phase != RingingPhase.TASKS) return
+        if (!SnoozeMachine.canSnooze(alarm) || isSnoozeInFlight) return
+        isSnoozeInFlight = true
+        val eng = engine
+        viewModelScope.launch {
+            val finished = recorder?.finish(
+                result = TaskSessionResult.SNOOZED,
+                taskResults = eng?.results ?: emptyList(),
+                totalMistakes = eng?.state?.totalMistakes ?: 0
+            )
+            val decision = SnoozeMachine.decideSnooze(alarm, System.currentTimeMillis())
+            val armed = alarm.copy(
+                snoozeTargetAt = decision.targetAtMillis,
+                isSnoozeUsed = true,
+                snoozeSessionTaskCount = decision.sessionTaskCount,
+                snoozeSessionDifficulty = decision.sessionDifficulty,
+                snoozeSessionId = finished?.id ?: alarm.snoozeSessionId
+            )
+            alarmRepository.updateSnoozeState(armed)
+            events.send(RingingEvent.SnoozeArmed)
+        }
     }
 
     // --- Math round ------------------------------------------------------------
@@ -324,7 +394,8 @@ class RingingViewModel(
         }
         val summary = SummaryUiState(
             solveTimeMs = eng.results.sumOf { it.timeTakenMs },
-            mistakes = eng.state.totalMistakes
+            mistakes = eng.state.totalMistakes,
+            streakMornings = 0
         )
         viewModelScope.launch {
             recorder?.finish(
@@ -332,8 +403,18 @@ class RingingViewModel(
                 taskResults = eng.results,
                 totalMistakes = eng.state.totalMistakes
             )
+            // Spec 4.4: the summary shows the streak INCLUDING the
+            // morning that just finished. A snoozed morning merged into
+            // its SNOOZED row never counts as clean.
+            val streak = StreakCalculator.currentStreak(
+                taskSessionRepository.getAllChronological()
+            )
             _uiState.update {
-                it.copy(phase = RingingPhase.SUMMARY, summary = summary, task = null)
+                it.copy(
+                    phase = RingingPhase.SUMMARY,
+                    summary = summary.copy(streakMornings = streak),
+                    task = null
+                )
             }
             events.send(RingingEvent.StopRinging)
         }

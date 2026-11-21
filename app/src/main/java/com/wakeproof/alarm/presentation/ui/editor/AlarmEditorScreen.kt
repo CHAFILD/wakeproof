@@ -283,12 +283,14 @@ private fun SnoozeSection(
     state: AlarmEditorUiState,
     viewModel: AlarmEditorViewModel
 ) {
+    val isHardcore = state.difficulty == Difficulty.HARDCORE
     SectionTitle(R.string.editor_section_snooze)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         SnoozePolicy.entries.forEach { policy ->
             FilterChip(
                 selected = state.snoozePolicy == policy,
                 onClick = { viewModel.onSnoozePolicySelected(policy) },
+                enabled = !isHardcore,
                 label = {
                     Text(
                         text = stringResource(snoozePolicyLabelRes(policy)),
@@ -298,6 +300,9 @@ private fun SnoozeSection(
             )
         }
     }
+    if (isHardcore) {
+        EditorHint(R.string.editor_hardcore_snooze_hint)
+    }
 }
 
 @Composable
@@ -305,11 +310,26 @@ private fun VolumeSection(
     state: AlarmEditorUiState,
     viewModel: AlarmEditorViewModel
 ) {
-    SwitchRow(
-        titleRes = R.string.editor_section_volume,
-        checked = state.isVolumeRampEnabled,
-        onChecked = viewModel::onVolumeRampChanged
-    )
+    val isHardcore = state.difficulty == Difficulty.HARDCORE
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = stringResource(R.string.editor_section_volume),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.weight(1f)
+        )
+        Switch(
+            checked = state.isVolumeRampEnabled,
+            onCheckedChange = viewModel::onVolumeRampChanged,
+            enabled = !isHardcore
+        )
+    }
+    if (isHardcore) {
+        EditorHint(R.string.editor_hardcore_volume_hint)
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -318,6 +338,7 @@ private fun RecheckSection(
     state: AlarmEditorUiState,
     viewModel: AlarmEditorViewModel
 ) {
+    val isHardcore = state.difficulty == Difficulty.HARDCORE
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -336,8 +357,14 @@ private fun RecheckSection(
         }
         Switch(
             checked = state.isRecheckEnabled,
-            onCheckedChange = viewModel::onRecheckChanged
+            onCheckedChange = viewModel::onRecheckChanged,
+            // Spec 4.2.1: in HARDCORE the recheck ring can not be
+            // disabled (only its interval may change).
+            enabled = !isHardcore
         )
+    }
+    if (isHardcore) {
+        EditorHint(R.string.editor_hardcore_recheck_hint)
     }
     if (state.isRecheckEnabled) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -358,31 +385,21 @@ private fun RecheckSection(
 }
 
 @Composable
-private fun SwitchRow(
-    titleRes: Int,
-    checked: Boolean,
-    onChecked: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = stringResource(titleRes),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.weight(1f)
-        )
-        Switch(checked = checked, onCheckedChange = onChecked)
-    }
-}
-
-@Composable
 private fun SectionTitle(titleRes: Int) {
     Text(
         text = stringResource(titleRes),
         style = MaterialTheme.typography.titleMedium,
         color = MaterialTheme.colorScheme.onBackground
+    )
+}
+
+/** Small gray hint under a locked-in-hardcore section. */
+@Composable
+private fun EditorHint(textRes: Int) {
+    Text(
+        text = stringResource(textRes),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 }
 

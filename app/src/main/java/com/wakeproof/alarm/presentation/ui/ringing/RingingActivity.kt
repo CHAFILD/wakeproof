@@ -66,6 +66,14 @@ class RingingActivity : ComponentActivity() {
                                 // but keep the UI (summary) on screen.
                                 startService(RingingService.dismissIntent(this@RingingActivity, alarmId))
                             }
+                            RingingEvent.SnoozeArmed -> {
+                                // Snooze (spec 4.1.2): the alarm row now
+                                // carries the +10 min target, so the dismiss
+                                // re-arm schedules the snoozed ring; close
+                                // the ringing UI right away.
+                                startService(RingingService.dismissIntent(this@RingingActivity, alarmId))
+                                finish()
+                            }
                         }
                     }
                 }

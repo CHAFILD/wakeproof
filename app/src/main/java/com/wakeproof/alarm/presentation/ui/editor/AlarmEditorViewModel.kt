@@ -131,8 +131,24 @@ class AlarmEditorViewModel(
         }
     }
 
-    fun onDifficultySelected(difficulty: Difficulty) =
-        _uiState.update { it.copy(difficulty = difficulty) }
+    /**
+     * Spec 4.2.1 hardcore definition: snooze forced off, volume ramp
+     * forced off (100% from the first second) and the recheck ring can
+     * not be disabled (only its interval may change). Applied on every
+     * difficulty change so the UI reflects the locked values live.
+     */
+    fun onDifficultySelected(difficulty: Difficulty) = _uiState.update {
+        if (difficulty != Difficulty.HARDCORE) {
+            it.copy(difficulty = difficulty)
+        } else {
+            it.copy(
+                difficulty = difficulty,
+                snoozePolicy = SnoozePolicy.FORBIDDEN,
+                isVolumeRampEnabled = false,
+                isRecheckEnabled = true
+            )
+        }
+    }
 
     fun onSnoozePolicySelected(policy: SnoozePolicy) =
         _uiState.update { it.copy(snoozePolicy = policy) }
@@ -156,17 +172,27 @@ class AlarmEditorViewModel(
         }
         viewModelScope.launch {
             val base = loadedAlarm ?: Alarm()
+            // Defensive: the same locks the UI applies live (spec 4.2.1).
+            val normalized = if (state.difficulty == Difficulty.HARDCORE) {
+                state.copy(
+                    snoozePolicy = SnoozePolicy.FORBIDDEN,
+                    isVolumeRampEnabled = false,
+                    isRecheckEnabled = true
+                )
+            } else {
+                state
+            }
             val alarm = base.copy(
                 id = if (state.isNew) 0 else alarmId,
-                hour = state.hour,
-                minute = state.minute,
-                daysOfWeek = state.selectedDays,
-                taskTypes = state.taskTypes,
-                difficulty = state.difficulty,
-                snoozePolicy = state.snoozePolicy,
-                isVolumeRampEnabled = state.isVolumeRampEnabled,
-                isRecheckEnabled = state.isRecheckEnabled,
-                recheckDelayMin = state.recheckDelayMin
+                hour = normalized.hour,
+                minute = normalized.minute,
+                daysOfWeek = normalized.selectedDays,
+                taskTypes = normalized.taskTypes,
+                difficulty = normalized.difficulty,
+                snoozePolicy = normalized.snoozePolicy,
+                isVolumeRampEnabled = normalized.isVolumeRampEnabled,
+                isRecheckEnabled = normalized.isRecheckEnabled,
+                recheckDelayMin = normalized.recheckDelayMin
             )
             alarmRepository.upsert(alarm)
             events.send(AlarmEditorEvent.Finished)

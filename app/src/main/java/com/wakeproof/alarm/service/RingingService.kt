@@ -17,6 +17,7 @@ import androidx.core.app.ServiceCompat
 import com.wakeproof.alarm.R
 import com.wakeproof.alarm.WakeProofApplication
 import com.wakeproof.alarm.domain.audio.VolumeRamp
+import com.wakeproof.alarm.domain.model.Difficulty
 import com.wakeproof.alarm.presentation.ui.ringing.RingingActivity
 import com.wakeproof.alarm.util.AlarmNotifications
 import kotlinx.coroutines.CoroutineScope
@@ -128,8 +129,9 @@ class RingingService : Service() {
                 Log.w(TAG, "Alarm id=$id vanished before ringing, dismissing")
                 dismiss(id)
             } else {
-                if (!alarm.isVolumeRampEnabled) {
+                if (!alarm.isVolumeRampEnabled || alarm.difficulty == Difficulty.HARDCORE) {
                     // Spec 4.1.5: no ramp -> 100% from the first second.
+                    // Spec 4.2.1: HARDCORE always rings at full volume.
                     currentVolume = VolumeRamp.MAX_VOLUME
                 }
                 startPlayback()

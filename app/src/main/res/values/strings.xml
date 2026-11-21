@@ -46,6 +46,9 @@
     <string name="snooze_forbidden">Запрещён</string>
     <string name="snooze_once">Один раз</string>
     <string name="snooze_once_harder">Один раз с усложнением</string>
+    <string name="editor_hardcore_snooze_hint">В хардкоре snooze недоступен</string>
+    <string name="editor_hardcore_volume_hint">В хардкоре громкость сразу 100%</string>
+    <string name="editor_hardcore_recheck_hint">В хардкоре контрольную проверку нельзя отключить</string>
     <string name="editor_error_no_tasks">Выберите хотя бы один тип задач</string>
     <string name="editor_save">Сохранить</string>
     <string name="editor_delete">Удалить будильник</string>
@@ -62,7 +65,6 @@
     <string name="cd_open_settings">Открыть настройки</string>
 
     <!-- Stubs -->
-    <string name="stats_stub_text">Здесь появятся серия, график баллов и экспорт CSV</string>
     <string name="sleep_stub_text">Здесь появятся ночи записи сна и избранные фрагменты</string>
 
     <!-- Ringing (screen + notification) -->
@@ -74,6 +76,7 @@
 
     <!-- Ringing task queue (spec 4.1.3 / 4.2) -->
     <string name="ringing_task_progress">Задача %1$d из %2$d</string>
+    <string name="ringing_snooze_button">+10 мин</string>
     <plurals name="ringing_mistakes">
         <item quantity="one">%1$d ошибка</item>
         <item quantity="few">%1$d ошибки</item>
@@ -82,6 +85,18 @@
     </plurals>
     <string name="streak_dot_filled">●</string>
     <string name="streak_dot_empty">○</string>
+
+    <!-- Streak (spec 4.4) -->
+    <string name="streak_badge">🔥 %1$d</string>
+    <string name="summary_streak_line">🔥 Серия: %1$d %2$s</string>
+    <string name="stats_current_streak">Текущая серия</string>
+    <string name="stats_record_streak">Рекордная серия</string>
+    <plurals name="streak_morning_word">
+        <item quantity="one">утро</item>
+        <item quantity="few">утра</item>
+        <item quantity="many">утр</item>
+        <item quantity="other">утр</item>
+    </plurals>
 
     <!-- Task colors (КРАСНЫЙ, ЗЕЛЁНЫЙ, СИНИЙ, ЖЁЛТЫЙ) -->
     <string name="task_color_red">КРАСНЫЙ</string>

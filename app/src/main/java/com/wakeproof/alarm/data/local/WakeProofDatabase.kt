@@ -20,6 +20,8 @@ import com.wakeproof.alarm.data.local.entity.TaskSessionEntity
  * Version 3 adds the task_sessions table (spec 4.1.4 / 6) and the
  * single-row emergency_phrase storage (spec 4.1.4); see
  * [MIGRATION_2_3].
+ * Version 4 adds the snooze-state columns on alarms (spec 4.1.2,
+ * stage 5); see [MIGRATION_3_4].
  */
 @Database(
     entities = [
@@ -27,7 +29,7 @@ import com.wakeproof.alarm.data.local.entity.TaskSessionEntity
         TaskSessionEntity::class,
         EmergencyPhraseEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class WakeProofDatabase : RoomDatabase() {
@@ -100,6 +102,36 @@ abstract class WakeProofDatabase : RoomDatabase() {
                         "`phrase` TEXT NOT NULL, " +
                         "`generatedAt` INTEGER NOT NULL" +
                         ")"
+                )
+            }
+        }
+
+        /**
+         * 3 -> 4: snooze state on alarms (spec 4.1.2, stage 5). The
+         * defaults keep the existing rows snooze-clean: nothing armed,
+         * limit not consumed, no snooze session link.
+         */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE `${AlarmEntity.TABLE_NAME}` ADD COLUMN " +
+                        "`snoozeTargetAt` INTEGER NOT NULL DEFAULT 0"
+                )
+                db.execSQL(
+                    "ALTER TABLE `${AlarmEntity.TABLE_NAME}` ADD COLUMN " +
+                        "`isSnoozeUsed` INTEGER NOT NULL DEFAULT 0"
+                )
+                db.execSQL(
+                    "ALTER TABLE `${AlarmEntity.TABLE_NAME}` ADD COLUMN " +
+                        "`snoozeSessionTaskCount` INTEGER NOT NULL DEFAULT 0"
+                )
+                db.execSQL(
+                    "ALTER TABLE `${AlarmEntity.TABLE_NAME}` ADD COLUMN " +
+                        "`snoozeSessionDifficulty` TEXT"
+                )
+                db.execSQL(
+                    "ALTER TABLE `${AlarmEntity.TABLE_NAME}` ADD COLUMN " +
+                        "`snoozeSessionId` INTEGER NOT NULL DEFAULT 0"
                 )
             }
         }

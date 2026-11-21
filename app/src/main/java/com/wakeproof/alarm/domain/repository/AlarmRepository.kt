@@ -23,4 +23,11 @@ interface AlarmRepository {
 
     /** Enables or disables the alarm without rewriting its other fields. */
     suspend fun setEnabled(id: Long, enabled: Boolean)
+
+    /**
+     * Partial update of the snooze-state columns (spec 4.1.2) from the
+     * given alarm: pending target, limit flag and the snoozed-session
+     * parameters/link. Other alarm fields are not touched.
+     */
+    suspend fun updateSnoozeState(alarm: Alarm)
 }

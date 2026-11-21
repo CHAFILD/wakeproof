@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -20,19 +21,19 @@ import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 /**
- * Morning summary, spec 4.1.3:
+ * Morning summary, spec 4.1.3 / 4.4:
  *
  * ```
  * ☀️ Доброе утро!
  * ⏱ Задачи: 1:42 · ошибок: 1
- * 🔥 Серия: 12 утр          <- streak, later stage
+ * 🔥 Серия: 12 утр
  * ✅ Контрольный звонок…    <- recheck, later stage
  * [Закрыть]
  * ```
  *
- * The streak and recheck rows arrive in the next stages; their slots
- * are the marked spacer + row sections below so the layout is ready
- * to take them without restructuring.
+ * The recheck row arrives in the next stage; its slot is the marked
+ * spacer section below so the layout is ready to take it without
+ * restructuring.
  */
 @Composable
 fun SessionSummaryContent(
@@ -60,8 +61,18 @@ fun SessionSummaryContent(
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground
         )
-        // --- Streak slot (spec 4.4, later stage) -------------------
+        // --- Streak row (spec 4.4) ---------------------------------
         Spacer(modifier = Modifier.height(8.dp))
+        val streak = summary?.streakMornings ?: 0
+        Text(
+            text = stringResource(
+                R.string.summary_streak_line,
+                streak,
+                pluralStringResource(R.plurals.streak_morning_word, streak)
+            ),
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.primary
+        )
         // --- Recheck slot (spec 4.3, later stage) ------------------
         Spacer(modifier = Modifier.height(8.dp))
         // -----------------------------------------------------------
