@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -53,16 +54,16 @@ fun RingingScreen(
     // Spec 4.1.3: Back does not leave the ringing screen.
     BackHandler(enabled = true) {}
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp, vertical = 32.dp)
-    ) {
-        when (uiState.phase) {
-            RingingPhase.LOADING -> LoadingContent(uiState.alarmTimeLabel)
+    Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp, vertical = 32.dp)
+        ) {
+            when (uiState.phase) {
+                RingingPhase.LOADING -> LoadingContent(uiState.alarmTimeLabel)
 
-            RingingPhase.TASKS -> {
-                TasksContent(
+                RingingPhase.TASKS -> TasksContent(
                     task = uiState.task,
                     alarmTimeLabel = uiState.alarmTimeLabel,
                     onMathSubmit = viewModel::onMathSubmit,
@@ -71,27 +72,34 @@ fun RingingScreen(
                     onMemoryTap = viewModel::onMemoryTap,
                     onStroopSubmit = viewModel::onStroopSubmit
                 )
-                // Spec 4.1.4: hidden corner, 5-second hold.
-                EmergencyCorner(
-                    modifier = Modifier.align(Alignment.TopEnd),
-                    onActivated = viewModel::onEmergencyCornerActivated
+
+                RingingPhase.SUMMARY -> SessionSummaryContent(
+                    summary = uiState.summary,
+                    onCloseUi = onCloseUi
                 )
+
+                RingingPhase.EMERGENCY_PHRASE -> EmergencyPhraseContent(
+                    hintPhrase = uiState.emergencyHintPhrase,
+                    isWrong = uiState.isEmergencyPhraseWrong,
+                    onPhraseChanged = viewModel::onEmergencyPhraseChanged,
+                    onSubmit = viewModel::onEmergencySubmit,
+                    onBackToTasks = viewModel::onEmergencyBackToTasks
+                )
+
+                RingingPhase.EMERGENCY_DONE -> EmergencyDoneContent(onCloseUi = onCloseUi)
             }
-
-            RingingPhase.SUMMARY -> SessionSummaryContent(
-                summary = uiState.summary,
-                onCloseUi = onCloseUi
+        }
+        // Spec 4.1.4: the emergency corner sits flush in the screen's
+        // top-right corner, above the padded content (away from the
+        // clock), just below the status bar.
+        if (uiState.phase == RingingPhase.TASKS) {
+            EmergencyCorner(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(top = 6.dp, end = 10.dp),
+                onActivated = viewModel::onEmergencyCornerActivated
             )
-
-            RingingPhase.EMERGENCY_PHRASE -> EmergencyPhraseContent(
-                hintPhrase = uiState.emergencyHintPhrase,
-                isWrong = uiState.isEmergencyPhraseWrong,
-                onPhraseChanged = viewModel::onEmergencyPhraseChanged,
-                onSubmit = viewModel::onEmergencySubmit,
-                onBackToTasks = viewModel::onEmergencyBackToTasks
-            )
-
-            RingingPhase.EMERGENCY_DONE -> EmergencyDoneContent(onCloseUi = onCloseUi)
         }
     }
 }

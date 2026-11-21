@@ -56,9 +56,12 @@ fun EmergencyCorner(
 
     LaunchedEffect(isHeld) {
         if (isHeld) {
+            // Float division: Long/Long here would be integer division
+            // (50/5000 == 0) and the progress would never grow.
+            val step = HOLD_STEP_MS.toFloat() / HOLD_DURATION_MS
             while (progress < 1f) {
                 delay(HOLD_STEP_MS)
-                progress = (progress + HOLD_STEP_MS / HOLD_DURATION_MS).coerceAtMost(1f)
+                progress = (progress + step).coerceAtMost(1f)
             }
             isHeld = false
             progress = 0f
