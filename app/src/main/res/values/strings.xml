@@ -61,4 +61,13 @@
     <!-- Stubs -->
     <string name="stats_stub_text">Здесь появятся серия, график баллов и экспорт CSV</string>
     <string name="sleep_stub_text">Здесь появятся ночи записи сна и избранные фрагменты</string>
+
+    <!-- Ringing (screen + notification) -->
+    <string name="ringing_channel_name">Будильник</string>
+    <string name="ringing_channel_description">Звонок будильника WakeProof</string>
+    <string name="ringing_notification_title">Будильник</string>
+    <string name="ringing_notification_text">Пора просыпаться</string>
+    <string name="ringing_alarm_at">Будильник · %1$s</string>
+    <string name="ringing_dismiss">Выключить</string>
+    <string name="cd_ringing_dismiss">Выключить будильник</string>
 </resources>
