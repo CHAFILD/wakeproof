@@ -10,6 +10,48 @@
     <!-- Alarms screen -->
     <string name="alarms_empty_title">Будильников нет</string>
     <string name="alarms_empty_hint">Нажмите «+», чтобы создать первый будильник</string>
+    <string name="alarm_next_in_h_m">Сработает через %1$d ч %2$d мин</string>
+    <string name="alarm_next_in_m">Сработает через %1$d мин</string>
+    <string name="alarm_disabled">Выключен</string>
+
+    <!-- Weekday short labels -->
+    <string name="day_short_mon">Пн</string>
+    <string name="day_short_tue">Вт</string>
+    <string name="day_short_wed">Ср</string>
+    <string name="day_short_thu">Чт</string>
+    <string name="day_short_fri">Пт</string>
+    <string name="day_short_sat">Сб</string>
+    <string name="day_short_sun">Вс</string>
+
+    <!-- Alarm editor -->
+    <string name="editor_new_title">Новый будильник</string>
+    <string name="editor_edit_title">Редактор будильника</string>
+    <string name="cd_back">Назад</string>
+    <string name="editor_section_time">Время</string>
+    <string name="editor_section_days">Дни недели</string>
+    <string name="editor_section_tasks">Задачи для выключения</string>
+    <string name="editor_section_difficulty">Сложность</string>
+    <string name="editor_section_snooze">Отсрочка (snooze)</string>
+    <string name="editor_section_volume">Нарастание громкости</string>
+    <string name="editor_section_recheck">Контрольная проверка</string>
+    <string name="editor_recheck_hint">Тихий звонок после выключения будильника</string>
+    <string name="recheck_interval_min">%1$d мин</string>
+    <string name="task_type_math">Математика</string>
+    <string name="task_type_memory">Память</string>
+    <string name="task_type_stroop">Stroop</string>
+    <string name="difficulty_easy">Лёгкий</string>
+    <string name="difficulty_medium">Средний</string>
+    <string name="difficulty_hardcore">Хардкор</string>
+    <string name="snooze_forbidden">Запрещён</string>
+    <string name="snooze_once">Один раз</string>
+    <string name="snooze_once_harder">Один раз с усложнением</string>
+    <string name="editor_error_no_tasks">Выберите хотя бы один тип задач</string>
+    <string name="editor_save">Сохранить</string>
+    <string name="editor_delete">Удалить будильник</string>
+    <string name="editor_delete_confirm_title">Удалить будильник?</string>
+    <string name="editor_delete_confirm_text">Будильник будет удалён безвозвратно</string>
+    <string name="dialog_delete">Удалить</string>
+    <string name="dialog_cancel">Отмена</string>
 
     <!-- Content descriptions -->
     <string name="cd_add_alarm">Добавить будильник</string>
